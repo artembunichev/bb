@@ -7,8 +7,10 @@
 #include<stdio.h>
 /*type for game field.*/
 #define F unsigned long long
-/*a single byte type*/
-#define B unsigned char
+/*alias for one byte(char) type.*/
+#define B char
+/*a single unsigned byte type*/
+#define BU unsigned char
 /*test bit.*/
 #define TB(X,B)((X&(1ULL<<B))?1:0)
 /*set bit.*/
@@ -73,10 +75,18 @@ int
 main(){
 int urfd;/*urandom file descriptor*/
 F urd;/*random value from urandom file*/
-char agu=0;/*atoms were guessed (when becomes 4 the game is over).*/
-char ib[4];/*input buffer where player enters commands.*/
-char t;/*target number user's entered.*/
-char gm;/*is guess mode.*/
+B gac=0;/*guessed atoms count(when becomes 4 the game is over).*/
+/*list of atom positions were guessed.we don't need to store 4 of them
+since they're used only for telling if player has tried to guess position
+he had already guessed correctly.if we don't handle this case game will
+end after guessing the same atom 4 times.when 4th atom has been guessed
+the game will stop immediately,so no need to note that 4-th atom was guessed
+(there aren't following atoms anymore and game is ended).*/
+B ga[3];
+B ib[4];/*input buffer where player enters commands.*/
+B t;/*target number user has entered.*/
+B gm;/*is guess mode.*/
+int i;/*general purpose iterator.*/
 /*open urandom file*/
 if((urfd=open("/dev/urandom",O_RDONLY))==-1)E("can't open urandom.\n",20)
 /*read from urandom file. as far as we know how many possible variants of field
@@ -95,15 +105,27 @@ modulo operation does exactly this thing.*/
 pi=urd%309114;//store picked index in global variable
 f=popf(0,0);
 pf();
+/*initialise ga with -1(unguessed).*/
+i=0;while(i<3)ga[i++]=-1;
 /*keep game loop till player has successfully guessed 4atoms.*/
-while(agu<4){
+while(gac<4){
 gm=0;/*by default the mode is ray, not guess.*/
 if(read(0,&ib,4)>0){
 /*check if the first input character is 'g'-entering guess mode.*/
 if(ib[0]==103)gm=1;
 /*convert target row and column into single target value(0-63).*/
 t=(ib[gm]-48)*8+(ib[gm+1]-48);
-dprintf(1,"gm:%d,t: %d\n",gm,t);
+if(gm){/*handle guess.*/
+/*if there is an atom in position player specified and this particular position
+hasn't been guessed yet, then print H(hit) response and mark target position as guessed.*/
+if(TB(f,t)){
+if(ga[0]!=t&&ga[1]!=t&&ga[2]!=t){write(1,"H\n",2);ga[gac++]=t;}
+/*player can easily treat empty response to guess request as indicator that this position
+has already been guessed before and probably he entered it again by accident.*/
+}
+/*otherwise, if player's guess is wrong, print M(miss) response.*/
+else write(1,"M\n",2);
+}
 }
 }
 return 0;}
