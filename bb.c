@@ -111,11 +111,10 @@ i=0;while(i<3)ga[i++]=-1;
 while(gac<4){
 gm=0;/*by default the mode is ray, not guess.*/
 if(read(0,&ib,4)>0){
-/*check if the first input character is 'g'-entering guess mode.*/
-if(ib[0]==103)gm=1;
+/*check if the first input character is g(guess mode).*/
+if(ib[0]==103){/*handle guess*/
 /*convert target row and column into single target value(0-63).*/
-t=(ib[gm]-48)*8+(ib[gm+1]-48);
-if(gm){/*handle guess.*/
+t=((ib[1]-48)<<3)+(ib[2]-48);
 /*if there is an atom in position player specified and this particular position
 hasn't been guessed yet, then print H(hit) response and mark target position as guessed.*/
 if(TB(f,t)){
@@ -125,6 +124,19 @@ has already been guessed before and probably he entered it again by accident.*/
 }
 /*otherwise, if player's guess is wrong, print M(miss) response.*/
 else write(1,"M\n",2);
+}else{/*handle ray mode.*/
+/*ray mode input consists of sector index and position index.<sec><x>*/
+switch(ib[0]){/*determine target number in ray mode.*/
+/*sector formulas:
+0:x(with char: x-48);
+1:8x+7(with char: 8x-377);
+2:56+x(with char: x+8);
+3: 8x(with char: 8x-384).*/
+case 48:{t=ib[1]-48;break;}
+case 49:{t=(ib[1]<<3)-377;break;}
+case 50:{t=ib[1]+8;break;}
+case 51:{t=(ib[1]<<3)-384;break;}
+}
 }
 }
 }
