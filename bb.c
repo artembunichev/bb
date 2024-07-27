@@ -52,7 +52,7 @@ that position is not valid and we should skip it, so return MAX.*/
 return ULLONG_MAX;
 }
 
-/*print field function.*/
+/*print field procedure.*/
 void
 pf(){
 int r=0;
@@ -97,14 +97,13 @@ f=popf(0,0);
 pf();
 /*keep game loop till player has successfully guessed 4atoms.*/
 while(agu<4){
-t=0;
 gm=0;/*by default the mode is ray, not guess.*/
 if(read(0,&ib,4)>0){
 /*check if the first input character is 'g'-entering guess mode.*/
 if(ib[0]==103)gm=1;
-if(ib[gm+1]==10)t=ib[gm]-48;
-else t=(ib[gm]-48)*10+(ib[gm+1]-48);
-dprintf(1,"guessmode:%d,target: %d\n",gm,t);
+/*convert target row and column into single target value(0-63).*/
+t=(ib[gm]-48)*8+(ib[gm+1]-48);
+dprintf(1,"gm:%d,t: %d\n",gm,t);
 }
 }
 return 0;}
