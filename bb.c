@@ -16,6 +16,7 @@
 /*error exit.*/
 #define E(M,L){write(2,M,L);return 1;}
 
+F f;/*here the game field is stored.*/
 /*picked index for field position,which was generated from urandom. from 0 to 309114.*/
 int pi;
 int ci=0;/*current index of field position. used for tracking in popa function.*/
@@ -27,6 +28,8 @@ that indicates that there is no valid positions can be generated at all(actually
 know how many possible positions there are(309114) and I'm not going to request popf to search
 over this value popf can't return MAX as a result of call seeded with (0,0);MAX result is used
 during recursive calls to throw out positions we're not interested in).*/
+/*DO:try to use global variables instead of parameters and maybe in that case
+there will be no need for funtcion.*/
 F
 popf(F bas,B pa){
 int i=64;
@@ -49,9 +52,25 @@ that position is not valid and we should skip it, so return MAX.*/
 return ULLONG_MAX;
 }
 
+/*print field function.*/
+void
+pf(){
+int r=0;
+dprintf(1,"  0 1 2 3 4 5 6 7\n");
+while(r<8){
+int c=0;
+dprintf(1,"%d",r);
+	while(c<8){
+	dprintf(1," %d",TB(f,8*r+c));
+	if(c==7)dprintf(1,"\n");
+	++c;
+	}
+++r;
+}
+}
+
 int
 main(){
-F f;/*here the game field is stored.*/
 int urfd;/*urandom file descriptor*/
 F urd;/*random value from urandom file*/
 char agu=0;/*atoms were guessed (when becomes 4 the game is over).*/
@@ -75,6 +94,7 @@ our extreme value(310691) so we need to lower and limit it to the range [0,31069
 modulo operation does exactly this thing.*/
 pi=urd%309114;//store picked index in global variable
 f=popf(0,0);
+pf();
 /*keep game loop till player has successfully guessed 4atoms.*/
 while(agu<4){
 t=0;
