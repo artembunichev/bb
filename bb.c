@@ -17,11 +17,24 @@
 #define SB(X,B)(X|(1ULL<<B))
 /*error exit.*/
 #define E(M,L){write(2,M,L);return 1;}
+/*mock field (for development).*/
+#define MF(X,Y,W,Z)f=1ULL<<X|1ULL<<Y|1ULL<<W|1ULL<<Z;
 
 F f;/*here the game field is stored.*/
 /*picked index for field position,which was generated from urandom. from 0 to 309114.*/
 int pi;
 int ci=0;/*current index of field position. used for tracking in popa function.*/
+B ib[4];/*input buffer where player enters commands.*/ 
+B t;/*target number user has entered.*/
+B dd;/*direction delta(where the ray is going to move over the field).*/
+/*deltas for the two cells we want to examine in order to figure out
+if it's a deflection going to happen.*/
+B on;B tw;
+B rd;/*reflection delta(a positive one value, second is negative variant of it).*/
+/*ray result.it may be either a digit less than 64:an index of position where the
+ray out is or a digit greater than 64:in that case it should be treated as an ascii
+latin character(letters actually begin from 65) which can be H(hit) or R(reflection).*/
+B rr;
 /*a function that populates a game filed with atoms. the number of atoms is limited to 4.
 it's supposed to be called recursively. it takes a field base(which is changing during recursive
 calls) and number of atoms that have already been placed(initially,0).it returns either a valid
@@ -30,8 +43,6 @@ that indicates that there is no valid positions can be generated at all(actually
 know how many possible positions there are(309114) and I'm not going to request popf to search
 over this value popf can't return MAX as a result of call seeded with (0,0);MAX result is used
 during recursive calls to throw out positions we're not interested in).*/
-/*DO:try to use global variables instead of parameters and maybe in that case
-there will be no need for funtcion.*/
 F
 popf(F bas,B pa){
 int i=64;
@@ -45,7 +56,7 @@ else return ULLONG_MAX;
 }
 while(!TB(bas,--i)&&i>-1);
 while((++i<64)){
-if(((i>>3)&&(TB(bas,i-7)||TB(bas,i-8)||(i&7&&TB(bas,i-9))))||(i&7&&TB(bas,i-1)))continue;
+if((i>>3&&(TB(bas,i-7)||TB(bas,i-8)||(i&7&&TB(bas,i-9))))||(i&7&&TB(bas,i-1)))continue;
 r=popf(SB(bas,i),pa+1);
 if(r!=ULLONG_MAX)return r;
 }
@@ -58,13 +69,13 @@ return ULLONG_MAX;
 void
 pf(){
 int r=0;
-dprintf(1,"  0 1 2 3 4 5 6 7\n");
+write(1,"  0 1 2 3 4 5 6 7\n",18);
 while(r<8){
 int c=0;
 dprintf(1,"%d",r);
 	while(c<8){
 	dprintf(1," %d",TB(f,8*r+c));
-	if(c==7)dprintf(1,"\n");
+	if(c==7)write(1,"\n",1);
 	++c;
 	}
 ++r;
@@ -83,9 +94,6 @@ end after guessing the same atom 4 times.when 4th atom has been guessed
 the game will stop immediately,so no need to note that 4-th atom was guessed
 (there aren't following atoms anymore and game is ended).*/
 B ga[3];
-B ib[4];/*input buffer where player enters commands.*/
-B t;/*target number user has entered.*/
-B gm;/*is guess mode.*/
 int i;/*general purpose iterator.*/
 /*open urandom file*/
 if((urfd=open("/dev/urandom",O_RDONLY))==-1)E("can't open urandom.\n",20)
@@ -102,41 +110,93 @@ if(read(urfd,&urd,3)==-1){E("can't read urandom.\n",20)}
 might get is 24 ones(111...111), which equals to 254287 and it's a bit more than
 our extreme value(310691) so we need to lower and limit it to the range [0,310691].
 modulo operation does exactly this thing.*/
-pi=urd%309114;//store picked index in global variable
+pi=urd%309114;/*store picked index in global variable*/
 f=popf(0,0);
+//					MF(0,7,63,56);/*edges*/
+//					MF(1,6,57,62);/*pre-edges top and bottom*/
+//					MF(8,15,48,55);/*preedges left and right*/
+//					MF(9,14,49,54);/*edges of inner 7x7square*/
+//					MF()/**/
 pf();
 /*initialise ga with -1(unguessed).*/
 i=0;while(i<3)ga[i++]=-1;
 /*keep game loop till player has successfully guessed 4atoms.*/
 while(gac<4){
-gm=0;/*by default the mode is ray, not guess.*/
 if(read(0,&ib,4)>0){
+/*ignore newline character.*/
+if(ib[0]==10)continue;
 /*check if the first input character is g(guess mode).*/
 if(ib[0]==103){/*handle guess*/
+/*turn guess mode row and col characters into digits.*/
+ib[1]-=48;ib[2]-=48;
 /*convert target row and column into single target value(0-63).*/
-t=((ib[1]-48)<<3)+(ib[2]-48);
+t=(ib[1]<<3)+ib[2];
 /*if there is an atom in position player specified and this particular position
-hasn't been guessed yet, then print H(hit) response and mark target position as guessed.*/
+hasn't been guessed yet, then print Y(yes) response and mark target position as guessed.*/
 if(TB(f,t)){
-if(ga[0]!=t&&ga[1]!=t&&ga[2]!=t){write(1,"H\n",2);ga[gac++]=t;}
+if(ga[0]!=t&&ga[1]!=t&&ga[2]!=t){write(1,"Y\n",2);ga[gac++]=t;}
 /*player can easily treat empty response to guess request as indicator that this position
 has already been guessed before and probably he entered it again by accident.*/
 }
-/*otherwise, if player's guess is wrong, print M(miss) response.*/
-else write(1,"M\n",2);
+/*otherwise, if player's guess is wrong, print N(no) response.*/
+else write(1,"N\n",2);
 }else{/*handle ray mode.*/
+/*turn two ray characters into digits.*/
+ib[0]-=48;ib[1]-=48;
 /*ray mode input consists of sector index and position index.<sec><x>*/
-switch(ib[0]){/*determine target number in ray mode.*/
+switch(ib[0]){/*determine target number in ray mode.
+here target stands for ray poistion.*/
 /*sector formulas:
-0:x(with char: x-48);
-1:8x+7(with char: 8x-377);
-2:56+x(with char: x+8);
-3: 8x(with char: 8x-384).*/
-case 48:{t=ib[1]-48;break;}
-case 49:{t=(ib[1]<<3)-377;break;}
-case 50:{t=ib[1]+8;break;}
-case 51:{t=(ib[1]<<3)-384;break;}
+0:x;
+1:8x+7;
+2:56+x;
+3:8x.*/
+case 0:{t=ib[1];break;}
+case 1:{t=(ib[1]<<3)+7;break;}
+case 2:{t=ib[1]+56;break;}
+case 3:{t=ib[1]<<3;break;}
 }
+/*FOR TEST ONLY!!*/
+rr=0;
+/*here we're going to employ that i general purpose variable
+to tell whether it's a first ray "step" or not(it's needed for
+reflection detection).*/
+i=1;
+while(1){
+	/*hit check.*/
+	if(TB(f,t)){rr=72;goto r;}
+	/*out check.*/
+	if((!ib[0]&&t>>3>7)||(ib[0]==1&&!(t&7))
+	||(ib[0]==2&&t<8)||(ib[0]==3&&(t&7)==7)){rr=t<0||t>63?t-dd:t;goto r;}
+	/*values for 0 sector(down direction).*/
+	dd=8;
+	on=7;tw=9;
+	rd=1;
+	if(ib[0]==1)dd=-1;
+	else if(ib[0]==2)dd=-8;
+	else if(ib[0]==3)dd=1;
+	if(ib[0]>1)on=-7;
+	if(ib[0]&1){tw=-9;rd=8;};
+	/*reflection check. we check it only if it's
+	a first ray "step".*/
+	if(i&&
+	(((
+		(rd==8&&t>>3)
+		||
+		(rd==1&&t&7)	
+	)&&TB(f,t-rd))
+	||
+	((
+		(rd==8&&(t>>3!=7))
+		||
+		(rd==1&&((t&7)!=7))
+	)&&TB(f,t+rd)))){rr=82;goto r;}
+	t+=dd;/*keep flowing in the direction.*/
+	i=0;
+}
+r:/*result label.*/
+if(rr<64)dprintf(1,"%d\n",rr);
+else dprintf(1,"%c\n",rr);
 }
 }
 }
