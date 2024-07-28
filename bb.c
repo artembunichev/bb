@@ -103,9 +103,10 @@ utility program can be written as well) it'd be absolutely enough for us to obta
 a number in range [0,310691] in order to pick one of the variants. now we need to
 consider how many bytes should we read. 2^18 is 262144 and 2^19 equals 254288.
 2^18<309114<2^19 so we need at least 19bits to represent this number in binary.
-to translate 19bits into bytes, we need to divide 19 by 8, and we'll get 2.3.
+to change 19bits into bytes, we need to divide 19 by 8, and we'll get 2.3.
 as you may guess, we need to round it up so we need to read 3bytes from urandom file.*/
-if(read(urfd,&urd,3)==-1){E("can't read urandom.\n",20)}
+if(read(urfd,&urd,3)==-1)E("can't read urandom.\n",20)
+if(close(urfd)==-1)E("can't close urandom.\n",21)
 /*as far as we've read 3bytes of data from urandom file,the maximum data we
 might get is 24 ones(111...111), which equals to 254287 and it's a bit more than
 our extreme value(310691) so we need to lower and limit it to the range [0,310691].
@@ -116,7 +117,12 @@ f=popf(0,0);
 //					MF(1,6,57,62);/*pre-edges top and bottom*/
 //					MF(8,15,48,55);/*preedges left and right*/
 //					MF(9,14,49,54);/*edges of inner 7x7square*/
-//					MF()/**/
+//					MF(20,28,36,44)/*middle vertical.*/
+//					MF(27,29,43,45)/*double deflection.*/
+//					MF(42,29,59,63)/*complicated deflection detours.*/
+//					MF(0,13,53,55)/*way back.*/
+//					MF(0,13,18,53)/*deflection hit.*/
+//					MF(16,16,16,16)/*deflection on&tw edge cases.*/
 pf();
 /*initialise ga with -1(unguessed).*/
 i=0;while(i<3)ga[i++]=-1;
@@ -156,8 +162,6 @@ case 1:{t=(ib[1]<<3)+7;break;}
 case 2:{t=ib[1]+56;break;}
 case 3:{t=ib[1]<<3;break;}
 }
-/*FOR TEST ONLY!!*/
-rr=0;
 /*here we're going to employ that i general purpose variable
 to tell whether it's a first ray "step" or not(it's needed for
 reflection detection).*/
@@ -176,23 +180,39 @@ while(1){
 	else if(ib[0]==2)dd=-8;
 	else if(ib[0]==3)dd=1;
 	if(ib[0]>1)on=-7;
-	if(ib[0]&1){tw=-9;rd=8;};
+	if(TB(ib[0],0)^TB(ib[0],1))tw=-9;
+	if(ib[0]&1)rd=8;
+	/*deflection check. if now we're intersecting atom deflection area,
+	we change only the direction of the ray w/o moving it itself and jump to
+	the next cycle iteration immediately. so in the next iteration we'll
+	still be on the same position but with another direction and this
+	check happens again. such an approach allows us to avoid handling
+	double deflection case separately 'cause it'll be catched in the
+	next loop iteration.*/
+	if(((on==7&&(t&7)&&t<56)
+	||(on==-7&&(t&7)!=7&&t>7))
+	&&TB(f,t+on)){
+	/*originally I came up with this complicated formula: (ib[0]+(ib[0]&1||-1))&3
+	but apparently, it can easily be replaced with simple: 3-ib[0].
+	admittedly, they're not equivalents from math perspective, but in case where
+	ib[0] can be either 0,1,2 or 3, they're pretty much interchangeable.*/
+		ib[0]=3-ib[0];goto e;}
+	/*we use t<55(not 56)and t>8(not 7) because both 55 and 8
+	fit next condition and we can make use of this fact and complete
+	checks a bit faster.*/
+	if(((tw==9&&t<55&&(t&7)!=7)
+	||(tw==-9&&t>8&&t&7))
+	&&TB(f,t+tw)){ib[0]^=1;goto e;}
 	/*reflection check. we check it only if it's
 	a first ray "step".*/
-	if(i&&
-	(((
-		(rd==8&&t>>3)
-		||
-		(rd==1&&t&7)	
-	)&&TB(f,t-rd))
-	||
-	((
-		(rd==8&&(t>>3!=7))
-		||
-		(rd==1&&((t&7)!=7))
-	)&&TB(f,t+rd)))){rr=82;goto r;}
+	if(i&&((((rd==8&&t>>3)
+			||(rd==1&&t&7))
+		&&TB(f,t-rd))
+	||(((rd==8&&(t>>3!=7))
+			||(rd==1&&((t&7)!=7)))
+		&&TB(f,t+rd)))){rr=82;goto r;}
 	t+=dd;/*keep flowing in the direction.*/
-	i=0;
+	e:/*end of iteration label.*/i=0;/*it's not a first step anymore.*/
 }
 r:/*result label.*/
 if(rr<64)dprintf(1,"%d\n",rr);
