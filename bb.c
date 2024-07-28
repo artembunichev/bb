@@ -2,26 +2,20 @@
 #include<unistd.h>
 #include<fcntl.h>
 #include<limits.h>
-#include<stdlib.h>
-/*eliminate this crap in final build.*/
 #include<stdio.h>
 /*type for game field.*/
 #define F unsigned long long
 /*alias for one byte(char) type.*/
 #define B char
-/*a single unsigned byte type*/
-#define BU unsigned char
 /*test bit.*/
 #define TB(X,B)((X&(1ULL<<B))?1:0)
 /*set bit.*/
 #define SB(X,B)(X|(1ULL<<B))
 /*error exit.*/
 #define E(M,L){write(2,M,L);return 1;}
-/*mock field (for development).*/
-#define MF(X,Y,W,Z)f=1ULL<<X|1ULL<<Y|1ULL<<W|1ULL<<Z;
 
 F f;/*here the game field is stored.*/
-/*picked index for field position,which was generated from urandom. from 0 to 309114.*/
+/*picked index for field position,which was generated from urandom. from 0 to 309113.*/
 int pi;
 int ci=0;/*current index of field position. used for tracking in popa function.*/
 B ib[4];/*input buffer where player enters commands.*/ 
@@ -65,23 +59,6 @@ that position is not valid and we should skip it, so return MAX.*/
 return ULLONG_MAX;
 }
 
-/*print field procedure.*/
-void
-pf(){
-int r=0;
-write(1,"  0 1 2 3 4 5 6 7\n",18);
-while(r<8){
-int c=0;
-dprintf(1,"%d",r);
-	while(c<8){
-	dprintf(1," %d",TB(f,8*r+c));
-	if(c==7)write(1,"\n",1);
-	++c;
-	}
-++r;
-}
-}
-
 int
 main(){
 int urfd;/*urandom file descriptor*/
@@ -102,7 +79,7 @@ positions are - 309114(I've actually computed it during the development process,
 utility program can be written as well) it'd be absolutely enough for us to obtain
 a number in range [0,310691] in order to pick one of the variants. now we need to
 consider how many bytes should we read. 2^18 is 262144 and 2^19 equals 254288.
-2^18<309114<2^19 so we need at least 19bits to represent this number in binary.
+2^18<309114<=2^19 so we need at least 19bits to represent this number in binary.
 to change 19bits into bytes, we need to divide 19 by 8, and we'll get 2.3.
 as you may guess, we need to round it up so we need to read 3bytes from urandom file.*/
 if(read(urfd,&urd,3)==-1)E("can't read urandom.\n",20)
@@ -113,17 +90,6 @@ our extreme value(310691) so we need to lower and limit it to the range [0,31069
 modulo operation does exactly this thing.*/
 pi=urd%309114;/*store picked index in global variable*/
 f=popf(0,0);
-//					MF(0,7,63,56);/*edges*/
-//					MF(1,6,57,62);/*pre-edges top and bottom*/
-//					MF(8,15,48,55);/*preedges left and right*/
-//					MF(9,14,49,54);/*edges of inner 7x7square*/
-//					MF(20,28,36,44)/*middle vertical.*/
-//					MF(27,29,43,45)/*double deflection.*/
-//					MF(42,29,59,63)/*complicated deflection detours.*/
-//					MF(0,13,53,55)/*way back.*/
-//					MF(0,13,18,53)/*deflection hit.*/
-//					MF(16,16,16,16)/*deflection on&tw edge cases.*/
-pf();
 /*initialise ga with -1(unguessed).*/
 i=0;while(i<3)ga[i++]=-1;
 /*keep game loop till player has successfully guessed 4atoms.*/
@@ -215,7 +181,13 @@ while(1){
 	e:/*end of iteration label.*/i=0;/*it's not a first step anymore.*/
 }
 r:/*result label.*/
-if(rr<64)dprintf(1,"%d\n",rr);
+if(rr<64){
+if(!(rr>>3)){rr=10*(((!TB(ib[0],1)&TB(ib[0],0))<<1)|TB(ib[0],0))+(ib[0]==2?rr:0);goto pr;}
+if((rr&7)==7){rr=10+(!ib[0]?17:rr>>3);goto pr;}
+if(rr>>3==7){rr=20+(ib[0]==1?17:rr&7);goto pr;}
+if(!(rr&7))rr=30+(rr>>3);
+pr:/*print result label.*/dprintf(1,"%02d\n",rr);
+}
 else dprintf(1,"%c\n",rr);
 }
 }
