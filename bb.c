@@ -15,7 +15,7 @@
 #define E(M,L){write(2,M,L);return 1;}
 
 F f;/*here the game field is stored.*/
-/*picked index for field position,which was generated from urandom. from 0 to 309113.*/
+/*picked index for field position,which was generated from urandom. from 0 to 7624511.*/
 int pi;
 int ci=0;/*current index of field position. used for tracking in popa function.*/
 B ib[4];/*input buffer where player enters commands.*/ 
@@ -34,14 +34,15 @@ it's supposed to be called recursively. it takes a field base(which is changing 
 calls) and number of atoms that have already been placed(initially,0).it returns either a valid
 field position that can be safely used in further game logic or a ULLONG_MAX value(MAX shorted)
 that indicates that there is no valid positions can be generated at all(actually, since I personally
-know how many possible positions there are(309114) and I'm not going to request popf to search
+know how many possible positions there are(7624512) and I'm not going to request popf to search
 over this value popf can't return MAX as a result of call seeded with (0,0);MAX result is used
 during recursive calls to throw out positions we're not interested in).*/
+
 F
 popf(F bas,B pa){
 int i=64;
 F r;/*result of nested popf.*/
-if(pa==4){
+if(pa==5){
 if(ci++==pi)return bas;
 /*we're not interested in handling positions that do not
 have the index we want, even though they're final and valid, so we skip
@@ -50,7 +51,6 @@ else return ULLONG_MAX;
 }
 while(!TB(bas,--i)&&i>-1);
 while((++i<64)){
-if((i>>3&&(TB(bas,i-7)||TB(bas,i-8)||(i&7&&TB(bas,i-9))))||(i&7&&TB(bas,i-1)))continue;
 r=popf(SB(bas,i),pa+1);
 if(r!=ULLONG_MAX)return r;
 }
@@ -63,37 +63,37 @@ int
 main(){
 int urfd;/*urandom file descriptor*/
 F urd;/*random value from urandom file*/
-B gac=0;/*guessed atoms count(when becomes 4 the game is over).*/
-/*list of atom positions were guessed.we don't need to store 4 of them
+B gac=0;/*guessed atoms count(when becomes 5 the game is over).*/
+/*list of atom positions were guessed.we don't need to store 5 of them
 since they're used only for telling if player has tried to guess position
 he had already guessed correctly.if we don't handle this case game will
-end after guessing the same atom 4 times.when 4th atom has been guessed
-the game will stop immediately,so no need to note that 4-th atom was guessed
+end after guessing the same atom 5 times.when 5th atom has been guessed
+the game will stop immediately,so no need to note that 5th atom was guessed
 (there aren't following atoms anymore and game is ended).*/
-B ga[3];
+B ga[4];
 int i;/*general purpose iterator.*/
 /*open urandom file*/
 if((urfd=open("/dev/urandom",O_RDONLY))==-1)E("can't open urandom.\n",20)
 /*read from urandom file. as far as we know how many possible variants of field
-positions are - 309114(I've actually computed it during the development process, but a speparate
+positions are - 7624512(I've actually computed it during the development process, but a speparate
 utility program can be written as well) it'd be absolutely enough for us to obtain
-a number in range [0,310691] in order to pick one of the variants. now we need to
-consider how many bytes should we read. 2^18 is 262144 and 2^19 equals 254288.
-2^18<309114<=2^19 so we need at least 19bits to represent this number in binary.
-to change 19bits into bytes, we need to divide 19 by 8, and we'll get 2.3.
+a number in range [0,7624511] in order to pick one of the variants. now we need to
+consider how many bytes should we read. 2^22 is 4194304 and 2^23 equals 8388608.
+2^22<7624512<=2^23 so we need at least 23bits to represent this number in binary.
+to change 23bits into bytes, we need to divide 23 by 8, and we'll get 2.8.
 as you may guess, we need to round it up so we need to read 3bytes from urandom file.*/
 if(read(urfd,&urd,3)==-1)E("can't read urandom.\n",20)
 if(close(urfd)==-1)E("can't close urandom.\n",21)
 /*as far as we've read 3bytes of data from urandom file,the maximum data we
-might get is 24 ones(111...111), which equals to 254287 and it's a bit more than
-our extreme value(310691) so we need to lower and limit it to the range [0,310691].
+might get is 24 ones(111...111), which equals to 16777215 and it's a bit more than
+our extreme value(7624511) so we need to lower and limit it to the range [0,7624511].
 modulo operation does exactly this thing.*/
-pi=urd%309114;/*store picked index in global variable*/
+pi=urd%7624512;/*store picked index in global variable.*/
 f=popf(0,0);
 /*initialise ga with -1(unguessed).*/
 i=0;while(i<3)ga[i++]=-1;
 /*keep game loop till player has successfully guessed 4atoms.*/
-while(gac<4){
+while(gac<5){
 if(read(0,&ib,4)>0){
 /*ignore newline character.*/
 if(ib[0]==10)continue;
@@ -133,12 +133,7 @@ to tell whether it's a first ray "step" or not(it's needed for
 reflection detection).*/
 i=1;
 while(1){
-	/*hit check.*/
-	if(TB(f,t)){rr=72;goto r;}
-	/*out check.*/
-	if((!ib[0]&&t>>3>7)||(ib[0]==1&&!(t&7))
-	||(ib[0]==2&&t<8)||(ib[0]==3&&(t&7)==7)){rr=t<0||t>63?t-dd:t;goto r;}
-	/*values for 0 sector(down direction).*/
+	/*initial values for 0 sector(down direction).*/
 	dd=8;
 	on=7;tw=9;
 	rd=1;
@@ -148,6 +143,19 @@ while(1){
 	if(ib[0]>1)on=-7;
 	if(TB(ib[0],0)^TB(ib[0],1))tw=-9;
 	if(ib[0]&1)rd=8;
+	/*reflection check. we check it only if it's
+	a first ray "step".*/
+	if(i&&((((rd==8&&t>>3)
+			||(rd==1&&t&7))
+		&&TB(f,t-rd))
+	||(((rd==8&&(t>>3!=7))
+			||(rd==1&&((t&7)!=7)))
+		&&TB(f,t+rd)))){rr=82;goto r;}
+	/*out check.*/
+	if((!ib[0]&&t>>3>7)||(ib[0]==1&&!(t&7))
+	||(ib[0]==2&&t<8)||(ib[0]==3&&(t&7)==7)){rr=t<0||t>63?t-dd:t;goto r;}
+	/*hit check.*/
+	if(TB(f,t)){rr=72;goto r;}
 	/*deflection check. if now we're intersecting atom deflection area,
 	we change only the direction of the ray w/o moving it itself and jump to
 	the next cycle iteration immediately. so in the next iteration we'll
@@ -169,14 +177,6 @@ while(1){
 	if(((tw==9&&t<55&&(t&7)!=7)
 	||(tw==-9&&t>8&&t&7))
 	&&TB(f,t+tw)){ib[0]^=1;goto e;}
-	/*reflection check. we check it only if it's
-	a first ray "step".*/
-	if(i&&((((rd==8&&t>>3)
-			||(rd==1&&t&7))
-		&&TB(f,t-rd))
-	||(((rd==8&&(t>>3!=7))
-			||(rd==1&&((t&7)!=7)))
-		&&TB(f,t+rd)))){rr=82;goto r;}
 	t+=dd;/*keep flowing in the direction.*/
 	e:/*end of iteration label.*/i=0;/*it's not a first step anymore.*/
 }
