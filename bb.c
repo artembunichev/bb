@@ -90,7 +90,7 @@ our extreme value(7624511) so we need to lower and limit it to the range [0,7624
 modulo operation does exactly this thing.*/
 pi=urd%7624512;/*store picked index in global variable.*/
 f=popf(0,0);
-/*initialise ga with -1(unguessed).*/
+/*initialize ga with -1(unguessed).*/
 i=0;while(i<3)ga[i++]=-1;
 /*keep game loop till player has successfully guessed 4atoms.*/
 while(gac<5){
