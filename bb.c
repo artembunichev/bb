@@ -102,7 +102,7 @@ if(ib[0]==103){/*handle guess*/
 /*turn guess mode row and col characters into digits.*/
 ib[1]-=48;ib[2]-=48;
 /*convert target row and column into single target value(0-63).*/
-t=(ib[1]<<3)+ib[2];
+t=(ib[1]*10)+ib[2];
 /*if there is an atom in position player specified and this particular position
 hasn't been guessed yet, then print Y(yes) response and mark target position as guessed.*/
 if(TB(f,t)){
