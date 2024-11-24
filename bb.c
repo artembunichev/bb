@@ -3,6 +3,16 @@
 #include<fcntl.h>
 #include<limits.h>
 #include<stdio.h>
+
+/*
+	set this flag up and recompile the program in order
+	to enter a debug mode. more exactly, it'll print an internal
+	representation of a field (which pretty much readable and intuitive)
+	and gives you an opportunity to use MF macro (which is for "Mock Field"),
+	using which you can place atoms in desirable positions.
+*/
+#define DBG 0
+
 /*type for game field.*/
 #define F unsigned long long
 /*alias for one byte(char) type.*/
@@ -13,6 +23,10 @@
 #define SB(X,B)(X|(1ULL<<B))
 /*error exit.*/
 #define E(M,L){write(2,M,L);return 1;}
+
+#if DBG
+	#define MF(X,Y,W,Z,V)f=1ULL<<X|1ULL<<Y|1ULL<<W|1ULL<<Z|1ULL<<V;
+#endif
 
 F f;/*here the game field is stored.*/
 /*picked index for field position,which was generated from urandom. from 0 to 7624511.*/
@@ -37,6 +51,25 @@ that indicates that there is no valid positions can be generated at all(actually
 know how many possible positions there are(7624512) and I'm not going to request popf to search
 over this value popf can't return MAX as a result of call seeded with (0,0);MAX result is used
 during recursive calls to throw out positions we're not interested in).*/
+
+#if DBG
+	/*print field function.*/
+	void
+	pf(){
+	int r=0;
+	dprintf(1,"  0 1 2 3 4 5 6 7\n");
+	while(r<8){
+	int c=0;
+	dprintf(1,"%d",r);
+       	while(c<8){
+       	dprintf(1," %d",TB(f,8*r+c));
+       	if(c==7)dprintf(1,"\n");
+       	++c;
+       	}
+	++r;
+	}
+	}
+#endif
 
 F
 popf(F bas,B pa){
@@ -90,6 +123,12 @@ our extreme value(7624511) so we need to lower and limit it to the range [0,7624
 modulo operation does exactly this thing.*/
 pi=urd%7624512;/*store picked index in global variable.*/
 f=popf(0,0);
+
+#if DBG
+	/* put you MF macro call here if you want. */
+	pf();
+#endif
+
 /*initialize ga with -1(unguessed).*/
 i=0;while(i<3)ga[i++]=-1;
 /*keep game loop till player has successfully guessed 4atoms.*/
