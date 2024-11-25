@@ -9,10 +9,11 @@
 
 /*
 	set this flag up and recompile the program in order
-	to enter a debug mode. more exactly, it'll print an internal
-	representation of a field (which pretty much readable and intuitive)
-	and gives you an opportunity to use MF macro (which is for "Mock Field"),
-	using which you can place atoms in desirable positions.
+	to enter a debug mode. more exactly, it'll print an
+	internal representation of a field (which pretty much
+	readable and intuitive) and gives you an opportunity to
+	use MF macro (which is for "Mock Field"), using which
+	you can place atoms in desirable positions.
 */
 #define DBG 0
 
@@ -281,7 +282,11 @@ else{
 /*turn two ray characters into digits.*/
 ib[0]-=48;ib[1]-=48;
 
-/*ray mode input consists of sector index and position index.<sec><x>*/
+/*
+	ray mode input consists of sector index
+	and position index.
+	<sec><x>
+*/
 /*determine target number in ray mode.
 here target stands for ray poistion.*/
 switch(ib[0]){
