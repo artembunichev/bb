@@ -29,7 +29,7 @@
 #define E(M,L){write(2,M,L);return 1;}
 
 #if DBG
-#define MF(A,B,C,D,E)f=1ULL<<A|1ULL<<B|1ULL<<C|1ULL<<D|1ULL<<E;
+#define MF(A,B,C,D,E)f=1ULL<<A|1ULL<<B|1ULL<<C|1ULL<<D|1ULL<<E
 #endif
 
 
