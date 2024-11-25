@@ -242,7 +242,7 @@ while(gac<5){
 /*read player input.*/
 if(read(0,&ib,4)>0){
 /*ignore newline character.*/
-if(ib[0]==10)continue;
+if(ib[0]==10||ib[1]==10)continue;
 
 /*check if the first input character is 'g'(guess mode).*/
 if(ib[0]==103){
